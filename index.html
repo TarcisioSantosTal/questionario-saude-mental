@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Questionário - Saúde Mental e Trajetória Profissional</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+    .section {
+      display: none;
+    }
+    .active {
+      display: block;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .question {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Questionário - Saúde Mental e Trajetória Profissional</h1>
+<div id="quiz"></div>
+
+<div id="controls">
+  <button onclick="prevSection()">Anterior</button>
+  <button onclick="nextSection()">Próxima</button>
+  <button onclick="submitQuiz()">Enviar</button>
+</div>
+
+<script>
+  const sections = [
+    // SEÇÃO 1: DADOS DEMOGRÁFICOS
+    {
+      title: "Seção 1: Dados Demográficos",
+      questions: [
+        { text: "1. Idade:", options: ["18-24", "25-34", "35-44", "45-54", "55+"] },
+        { text: "2. Gênero:", options: ["Masculino", "Feminino", "Outro"] },
+        { text: "3. Nível de Escolaridade:", options: ["Ensino Fundamental Incompleto", "Ensino Fundamental Completo", "Ensino Médio Incompleto", "Ensino Médio Completo", "Ensino Superior Incompleto", "Ensino Superior Completo", "Pós-graduação"] },
+        { text: "4. Situação Profissional Atual:", options: ["Ativo (Empregado)", "Ativo (Autônomo)", "Inativo (Afastado por doença)", "Inativo (Aposentado por invalidez)", "Desempregado"] },
+        { text: "5. Setor de Atuação (para ativos):", options: ["Público", "Privado", "Terceiro Setor"] },
+        { text: "6. Renda Mensal Aproximada:", options: ["Até R$2.000", "R$2.001 - R$4.000", "R$4.001 - R$6.000", "R$6.001 - R$8.000", "Acima de R$8.000"] }
+      ]
+    },
+
+    // SEÇÃO 2: SAÚDE MENTAL E TRABALHO
+    {
+      title: "Seção 2: Saúde Mental e Trabalho",
+      instructions: "(Responda utilizando a escala: 1 = Discordo totalmente; 5 = Concordo totalmente)",
+      questions: [
+        { text: "1. Tenho me sentido ansioso(a) ou preocupado(a) com frequência no trabalho." },
+        { text: "2. Sinto que o trabalho tem um impacto negativo na minha saúde mental." },
+        { text: "3. Percebo que minha produtividade diminuiu devido a problemas de saúde mental." },
+        { text: "4. Já precisei me afastar do trabalho devido a questões de saúde mental." },
+        { text: "5. Acredito que a empresa onde trabalho oferece suporte adequado para questões de saúde mental." },
+        { text: "6. Para trabalhadores inativos: Sinto que a falta de apoio/preconceito dificulta meu retorno ao mercado de trabalho." },
+        { text: "7. Para trabalhadores inativos: Acredito que minha renda diminuiu drasticamente após o afastamento/aposentadoria." }
+      ]
+    },
+
+    // SEÇÃO 3: IMPACTO NA EMPRESA (PULA SE NÃO FOR ATIVO)
+    {
+      title: "Seção 3: Impacto na Empresa",
+      instructions: "(Responda utilizando a escala: 1 = Discordo totalmente; 5 = Concordo totalmente - Se não for empregado, pule para a seção 4)",
+      skipIfNotEmployed: true,
+      questions: [
+        { text: "1. Acredito que o absenteísmo na minha empresa é influenciado por problemas de saúde mental." },
+        { text: "2. Percebo que a empresa tem custos elevados devido ao afastamento de funcionários por questões de saúde mental." },
+        { text: "3. A empresa investe em programas de prevenção e gestão da saúde mental dos funcionários." }
+      ]
+    },
+
+    // SEÇÃO 4: POLÍTICAS PÚBLICAS E SUPORTE
+    {
+      title: "Seção 4: Políticas Públicas e Suporte",
+      instructions: "(Responda utilizando a escala: 1 = Discordo totalmente; 5 = Concordo totalmente)",
+      questions: [
+        { text: "1. Acredito que o governo oferece suporte adequado para trabalhadores com problemas de saúde mental." },
+        { text: "2. Os recursos destinados à prevenção de transtornos mentais são suficientes." },
+        { text: "3. As políticas públicas de saúde mental são eficazes na reinserção de trabalhadores afastados." }
+      ]
+    },
+
+    // SEÇÃO 5: IMPACTO PESSOAL
+    {
+      title: "Seção 5: Impacto Pessoal",
+      instructions: "(Responda utilizando a escala: 1 = Discordo totalmente; 5 = Concordo totalmente)",
+      questions: [
+        { text: "1. Sinto que minha qualidade de vida diminuiu devido a problemas de saúde mental." },
+        { text: "2. Percebo que o isolamento social aumentou devido aos meus problemas de saúde mental." },
+        { text: "3. Acredito que meus problemas de saúde mental afetaram minha capacidade de estudar e me desenvolver profissionalmente." }
+      ]
+    }
+  ];
+
+  let currentSection = 0;
+  const responses = JSON.parse(localStorage.getItem("quizResponses")) || {};
+
+  function renderSection(index) {
+    const section = sections[index];
+    let html = `<h2>${section.title}</h2>`;
+    
+    if (section.instructions) {
+      html += `<p><em>${section.instructions}</em></p>`;
+    }
+
+    // Verifica se deve pular a seção
+    if (section.skipIfNotEmployed && !isUserEmployed()) {
+      html += "<p>Você indicou que não é ativo, então essa seção foi pulada.</p>";
+    } else {
+      section.questions.forEach((q, i) => {
+        html += `<div class="question"><strong>${q.text}</strong><br>`;
+        
+        if (q.options) {
+          q.options.forEach(opt => {
+            html += `
+              <label>
+                <input type="radio" name="q_${index}_${i}" value="${opt}">
+                ${opt}
+              </label><br>`;
+          });
+        } else {
+          for (let j = 1; j <= 5; j++) {
+            html += `
+              <label>
+                <input type="radio" name="q_${index}_${i}" value="${j}">
+                ${j}
+              </label>&nbsp;&nbsp;`;
+          }
+        }
+
+        html += "</div>";
+      });
+    }
+
+    document.getElementById("quiz").innerHTML = html;
+    restoreAnswers(index);
+  }
+
+  function isUserEmployed() {
+    const data = responses[0] || {};
+    return data["4. Situação Profissional Atual?"]?.startsWith("Ativo");
+  }
+
+  function saveCurrentAnswers() {
+    const section = sections[currentSection];
+    const data = {};
+    section.questions.forEach((q, i) => {
+      const radios = document.getElementsByName(`q_${currentSection}_${i}`);
